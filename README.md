@@ -1,7 +1,5 @@
-# Reportable_Communicable_Diseases
+# starter_folder
 
-This is a project about Reportable Communicable Diseases. 
+This repo....
 
-
-
-
+It is organised as follows...
