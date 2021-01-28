@@ -1,2 +1,7 @@
 # Reportable_Communicable_Diseases
-My first R project
+
+This is a project about Reportable Communicable Diseases. 
+
+
+
+
