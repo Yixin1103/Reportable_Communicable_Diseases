@@ -1,5 +1,5 @@
 ---
-title: "TBD"
+title: "Paoer1"
 subtitle: "TBD"
 author: "TBD"
 thanks: "Code and data are available at: LINK."
@@ -7,6 +7,7 @@ date: "`r format(Sys.time(), '%d %B %Y')`"
 abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
 output:
   bookdown::pdf_document2:
+    latex_engine: xelatex
 toc: FALSE
 bibliography: references.bib
 ---
@@ -16,16 +17,64 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(palmerpenguins)
+library(here)
+library(janitor)
+library(kableExtra)
+
+
+all_data_path <- 
+  here::here('inputs/data/raw_data.csv')
+
+```
+
+```{r, include=FALSE}
+
+all_data <- read_csv(all_data_path)
+
+
+commDiseases <- 
+  all_data %>%
+  janitor::clean_names()%>%
+  select(disease:x85) %>%
+  mutate(
+         y0_19 = x1_2 + x01_04 + x05_09 + x10_14 + x15_19,
+         y20_39 = x20_24+ x25_29 + x30_34 + x35_39, 
+         y40_59 = x40_44+ x45_49 + x50_54 + x55_59,
+         y60_79 = x60_64+ x65_69 + x70_74 + x75_79,
+         y80 = x80_84 + x85) %>%
+  mutate(total=y0_19+y20_39+y40_59+y60_79+y80)%>%
+  select (disease,sex,y0_19,y20_39,y40_59,y60_79,y80,total)
+
+
+ByDisease <- filter(commDiseases, !is.na(sex))%>%
+  group_by(disease)%>%
+  summarise(
+    totalDisease= sum(total, na.rm = TRUE)
+    ) %>% #take out the explanations in the bottom
+  arrange(desc(totalDisease)) %>%
+  top_n(3) # Top 3 disease by the number of people infected are Chlamydia,Gonorrhea,Influenza. 
+
+top_3_disase <- ByDisease$disease
+
+
 ```
 
 # Introduction
 
-
-
-
 # Data
 
-Our data is of penguins (Figure \@ref(fig:bills)).
+Our data is of penguins (Figure \@ref(fig:bills)) and we analyzed using R [@citeR] and the 'ggplot2' package[@cy1]. We build on [@diagnostics10040243] and [@covid2020post] to analyze the data.
+
+```{r, echo = FALSE}
+filter(commDiseases, !is.na(sex))%>%
+  select(!sex) %>%
+  group_by(disease)%>%
+  summarise_each(list(sum)) %>%
+  filter(disease %in% c(top_3_disase)) %>% 
+  rename('Age 0-19' = y0_19, 'Age 20-39' = y20_39,'Age 40-59' = y40_59,'Age 60-79' = y60_79, 'Age 80+' = y80, 'Total' = total, 'Disease' = disease) %>% 
+  kableExtra::kbl(caption = "Count of entries by year for 2017-2019") %>%
+  kableExtra::kable_styling()
+```
 
 ```{r bills, fig.cap="Bills of penguins", echo = FALSE}
 ggplot(penguins, aes(x = island, fill = species)) +
@@ -53,20 +102,18 @@ ggplot(penguins, aes(x = island, fill = species)) +
   coord_flip()
 ```
 
-Talk way more about it. 
-
-
+Talk way more about it.
 
 # Model
 
+```{=tex}
 \begin{equation}
 Pr(\theta | y) = \frac{Pr(y | \theta) Pr(\theta)}{Pr(y)}  (\#eq:bayes)
 \end{equation}
-
+```
 Equation \@ref(eq:bayes) seems useful, eh?
 
-Here's a dumb example of how to use some references: In paper we run our analysis in `R` [@citeR]. We also use the `tidyverse` which was written by @thereferencecanbewhatever If we were interested in baseball data then @citeLahman could be useful. 
-
+Here's a dumb example of how to use some references: In paper we run our analysis in `R` [@citeR]. We also use the `tidyverse` which was written by @thereferencecanbewhatever If we were interested in baseball data then @citeLahman could be useful.
 
 # Results
 
@@ -74,7 +121,7 @@ Here's a dumb example of how to use some references: In paper we run our analysi
 
 ## First discussion point
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this.
 
 ## Second discussion point
 
@@ -86,11 +133,8 @@ Weaknesses and next steps should also be included.
 
 \newpage
 
-# Appendix {-}
+# Appendix {.unnumbered}
 
 \newpage
 
-
 # References
-
-
