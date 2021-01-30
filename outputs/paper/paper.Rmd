@@ -13,15 +13,19 @@ bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+opts_chunk$set(echo=FALSE,
+               cache=TRUE, autodep=TRUE, cache.comments=FALSE,
+               message=FALSE, warning=FALSE)
 
+# Load in the packages 
 library(tidyverse)
 library(palmerpenguins)
 library(here)
 library(janitor)
 library(kableExtra)
 
-
+# Get the code from R script and load in the data
 all_data_path <- 
   here::here('inputs/data/raw_data.csv')
 
@@ -31,7 +35,7 @@ all_data_path <-
 
 all_data <- read_csv(all_data_path)
 
-
+# Change the variable names. This is to make them easier to type and less confusing.
 commDiseases <- 
   all_data %>%
   janitor::clean_names()%>%
@@ -45,17 +49,21 @@ commDiseases <-
   mutate(total=y0_19+y20_39+y40_59+y60_79+y80)%>%
   select (disease,sex,y0_19,y20_39,y40_59,y60_79,y80,total)
 
-
+# Clean the data: there are three rows in the bottom with text explanations of the data. Need to delete the rows. 
 ByDisease <- filter(commDiseases, !is.na(sex))%>%
   group_by(disease)%>%
   summarise(
     totalDisease= sum(total, na.rm = TRUE)
-    ) %>% #take out the explanations in the bottom
+    ) %>% 
   arrange(desc(totalDisease)) %>%
   top_n(3) # Top 3 disease by the number of people infected are Chlamydia,Gonorrhea,Influenza. 
 
-top_3_disase <- ByDisease$disease
+# Get the names for the top three disease by total number. 
+top_3_disase <- ByDisease$disease 
 
+# Build a new data table with only the top three disease by total number for further analysis. 
+FinalDisease <- commDiseases %>%
+  filter(disease %in% c(top_3_disase))
 
 ```
 
@@ -65,55 +73,106 @@ top_3_disase <- ByDisease$disease
 
 Our data is of penguins (Figure \@ref(fig:bills)) and we analyzed using R [@citeR] and the 'ggplot2' package[@cy1]. We build on [@diagnostics10040243] and [@covid2020post] to analyze the data.
 
-```{r, echo = FALSE}
-filter(commDiseases, !is.na(sex))%>%
+```{r Table1, fig.cap="Disease Case Count by Age Group in 2018.",echo = FALSE}
+
+# Build a table that shows the number of people infect by disease by age groups. And made the table look nice. 
+FinalDisease %>%
   select(!sex) %>%
   group_by(disease)%>%
   summarise_each(list(sum)) %>%
-  filter(disease %in% c(top_3_disase)) %>% 
   rename('Age 0-19' = y0_19, 'Age 20-39' = y20_39,'Age 40-59' = y40_59,'Age 60-79' = y60_79, 'Age 80+' = y80, 'Total' = total, 'Disease' = disease) %>% 
-  kableExtra::kbl(caption = "Count of entries by year for 2017-2019") %>%
+  kableExtra::kbl(caption = "Disease Case Count by Age Group in 2018") %>%
   kableExtra::kable_styling()
 ```
 
-```{r bills, fig.cap="Bills of penguins", echo = FALSE}
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = FALSE) +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+
+
+
+```{r Table2, fig.cap="Disease Case Count by Sex in 2018.", echo=FALSE}
+
+FinalDisease %>% 
+  select(disease, sex, total) %>% 
+  pivot_wider(
+    names_from = sex,
+    values_from = total) %>% 
+ rename("Disease" = disease )%>% 
+  kableExtra::kbl(caption = "Disease Case Count by Sex in 2018") %>%
+  kableExtra::kable_styling()
 ```
 
-Talk more about it.
 
-Also bills and their average (Figure \@ref(fig:billssssss)). (Notice how you can change the height and width so they don't take the whole page?)
 
-```{r billssssss, fig.cap="More bills of penguins", echo = FALSE, fig.width=8, fig.height=4}
+```{r fig01, fig.cap="Diseases Case Counts by Sex in 2018", echo = FALSE, fig.width=8, fig.height=4}
+FinalDisease %>%
+  select(disease, sex, total)%>%
+  ggplot() + 
+  geom_bar(mapping = aes(x = disease, fill = sex, y=total), 
+           stat = "identity",
+           alpha = 4/5)+
+    labs(
+         x = "Diseases",
+       y = "Diseases Case Count", 
+       fill="Sex", caption = "Source: Open Data – City of Toronto"
+      )
 
-# This needs to be about the random data tha tI sasmpled?
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = FALSE) +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+
 ```
+
+
+```{r fig02, fig.cap="Diseases Case Counts by Age Groups in 2018", echo = FALSE, fig.width=8, fig.height=4}
+# Build pivot table to move the age groups variable to values of a "AgeGroup" variable. 
+FinalDisease %>%
+  select(!total) %>%
+  pivot_longer(
+    cols = y0_19 : y80,
+    names_to = "AgeGroup",
+    values_to = "total"
+    ) %>%
+  ggplot()+
+  geom_bar(mapping = aes(x = disease,  fill = AgeGroup, y=total),
+           stat = "identity", alpha = 4/5, position = "fill" 
+           ) +
+  labs( 
+       x = "Diseases",
+       y = "Case Count (%)",
+       caption = "Source: Open Data – City of Toronto") +
+  scale_fill_manual(values=c("#999999", "#E69F00", "#706249","#e9dd56", "#e98756"), 
+                       name="Age Groups",
+                       breaks=c("y0_19", "y20_39", "y40_59", "y60_79", "y80"),
+                       labels=c("Age 0-19", "Age 20-39",'Age 40-59','Age 60-79','Age 80+'))
+
+```
+
+
+
+```{r fig03, fig.cap="Age and Sex Distributions of Diseases Case Counts in 2018", echo = FALSE, fig.width=8, fig.height=4}
+# Build pivot table to move the age groups variable to values of a "AgeGroup" variable. 
+FinalDisease %>%
+  select(!total) %>%
+  rename('Age 0-19' = y0_19, 'Age 20-39' = y20_39,'Age 40-59' = y40_59,'Age 60-79' = y60_79, 'Age 80+' = y80, 'Disease' = disease) %>% 
+  pivot_longer(
+    cols = 'Age 0-19' : 'Age 80+',
+    names_to = "AgeGroup",
+    values_to = "total"
+  ) %>%
+  # Build the bar chart for age group distribution of the top three diseases. 
+  ggplot()+
+facet_wrap(~Disease )+
+  geom_bar(aes(AgeGroup,total, fill=sex), stat = "identity", position = "dodge") +
+  coord_flip()+
+      labs(
+         x = "Age Groups",
+       y = "Diseases Case Count", fill="Sex",
+       caption = "Source: Open Data – City of Toronto"
+      )
+
+```
+
+
 
 Talk way more about it.
 
-# Model
 
-```{=tex}
-\begin{equation}
-Pr(\theta | y) = \frac{Pr(y | \theta) Pr(\theta)}{Pr(y)}  (\#eq:bayes)
-\end{equation}
-```
-Equation \@ref(eq:bayes) seems useful, eh?
-
-Here's a dumb example of how to use some references: In paper we run our analysis in `R` [@citeR]. We also use the `tidyverse` which was written by @thereferencecanbewhatever If we were interested in baseball data then @citeLahman could be useful.
 
 # Results
 
